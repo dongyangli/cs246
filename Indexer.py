@@ -1,4 +1,3 @@
-#igraph_test.py
 # http://graus.nu/blog/pylucene-4-0-in-60-seconds-tutorial/
 # http://www.tutorialspoint.com/lucene/lucene_overview.htm
 

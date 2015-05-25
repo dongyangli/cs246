@@ -16,14 +16,10 @@ import MySQLdb as mdb
 import Convert as cvt
 import re
 
-user_query = "Super Mario"
-user_query = "0 apr"
-
 SIZE = 4
 
 def predict(user_query, analyzer, reader, searcher):
-    """ """
-    
+    """ lucene indexing """
     query = QueryParser(Version.LUCENE_4_10_1, "title", analyzer).parse(user_query)
     
     MAX = 100
@@ -39,6 +35,8 @@ def predict(user_query, analyzer, reader, searcher):
         #print page_id
     if not page_ids:
         print "empty page_ids!!!"
+
+    """ look up base categories """
     base_categories = {} 
     try:
         con = mdb.connect('localhost', 'root', '', 'cs246')
@@ -68,8 +66,8 @@ def predict(user_query, analyzer, reader, searcher):
                 top25base_categories[bc[0]] = bc[1]
         #for bc in top25base_categories:    
             #print(bc)
-        
 
+        """ look up goal categories """
         """ select some goal categories based one the based categories selected above """
         goal_categories = {}
         for bc in top25base_categories:
@@ -86,15 +84,14 @@ def predict(user_query, analyzer, reader, searcher):
                 else:
                     goal_categories[gc] = score/(dist*dist + 0.0001)
                 #print row
-        #if not goal_categories:
-            #print "empty goal category set!"
+        if not goal_categories:
+            print "empty goal category set!!!"
         """ Use the score of goal categories, find top 3 goal category, return them """
         sorted_gc = sorted(goal_categories.items(), key=lambda x:x[1], reverse=True)
         #for gc in sorted_gc:
             #print gc
         gcs = sorted_gc[0:SIZE]
         return gcs
-
 
 
     except mdb.Error, e:
@@ -105,15 +102,6 @@ def predict(user_query, analyzer, reader, searcher):
             con.close()
 
 
-def true_positives(labels, predicts):
-    """ How many label in labels appeared in predicts ? """
-    hits = 0
-    for label in labels:
-        if label in predicts:
-            hits += 1
-    return hits
-def precision(labels, predicts):
-    pass
 
 if __name__ == "__main__":
 
@@ -146,8 +134,8 @@ if __name__ == "__main__":
             if not res:
                 print "empty goal category set"
             print converted_res
-            """ compare labels and converted_res """
 
+            """ compare labels and converted_res """
             for label in labels:
                 label = label.replace('\r', '')
                 label = label.replace('\n', '')
@@ -167,7 +155,7 @@ if __name__ == "__main__":
     print "precision:", precision
     print "recall:", recall
 
-    #gc = predict(user_query, analyzer, reader, searcher)
+
 
 
 
