@@ -18,21 +18,47 @@ import re
 
 SIZE = 4
 
-def predict(user_query, analyzer, reader, searcher):
+management_bc = [
+"Wikipedia", 
+"Wikidata", 
+"Categories", 
+"wikiproject", 
+"lists", 
+"mediawiki", 
+"template", 
+"user", 
+"portal", 
+"categories", 
+"articles", 
+"pages" , 
+"stub",
+"wikidata",
+"wikipedia"]
+
+def predict(user_query, analyzer, reader, searcher, test = "individual"):
+    if test == "individual":
+        SIZE = 20;
+
     """ lucene indexing """
     query = QueryParser(Version.LUCENE_4_10_1, "title", analyzer).parse(user_query)
     
-    MAX = 100
+    MAX = 10
     hits = searcher.search(query, MAX)
 
     page_ids = {}
-    #print "Found %d document(s) that matched query '%s':" % (hits.totalHits, query)
+    print "Found %d document(s) that matched query '%s':" % (hits.totalHits, query)
     for hit in hits.scoreDocs:
         #print hit.score, hit.doc, hit.toString()
         doc = searcher.doc(hit.doc)
         page_id = doc.get("id")
         page_ids[page_id] = hit.score
         #print page_id
+
+        if test == "individual":
+            page_title = doc.get("title")
+            print page_id, page_title
+        
+        
     if not page_ids:
         print "empty page_ids!!!"
 
@@ -46,6 +72,18 @@ def predict(user_query, analyzer, reader, searcher):
             rows = cur.fetchall()
             for row in rows:
                 title = row[0]
+                """ 
+                remove instead all those nodes whose labels contain any of the following strings: 
+                Wikipedia, wikiproject, lists, mediawiki, template, user, portal, categories, 
+                articles, pages and stub. 
+                """
+                valid = True
+                for mbc in management_bc:
+                    if mbc in title:
+                        valid = False
+                        break
+                if not valid:
+                    continue
                 """ make a selection on the base category here """
                 # keep 25 Base Categories, according to the sum of lucene score
                 if base_categories.has_key(title):
@@ -71,7 +109,8 @@ def predict(user_query, analyzer, reader, searcher):
         """ select some goal categories based one the based categories selected above """
         goal_categories = {}
         for bc in top25base_categories:
-            #print bc
+            if test == "individual":
+                print bc
             score = top25base_categories[bc]
             cur.execute("SELECT cl_to, distance FROM dist WHERE cl_from = %s", [bc])
             rows = cur.fetchall() # return 99 goal categories
@@ -103,7 +142,9 @@ def predict(user_query, analyzer, reader, searcher):
 
 
 
-if __name__ == "__main__":
+
+
+def group_tests():
 
     TP = 0.0
     FN = 0.0
@@ -115,7 +156,7 @@ if __name__ == "__main__":
     analyzer = StandardAnalyzer(Version.LUCENE_4_10_1)
     reader = IndexReader.open(SimpleFSDirectory(File("./articleTitleIndex/")))
     searcher = IndexSearcher(reader)
-    with open('Labeled800Queries/labeler1.txt', 'r') as f:
+    with open('Labeled800Queries/labeler3.txt', 'r') as f:
         for line in f:
             n += 1
             line = line.split('\t')
@@ -124,7 +165,7 @@ if __name__ == "__main__":
             user_query = re.sub('[^0-9a-zA-Z]+', ' ', user_query)
             print user_query
             print labels
-            res =  predict(user_query, analyzer, reader, searcher)
+            res =  predict(user_query, analyzer, reader, searcher, test = "group")
 
             converted_res = []
             for label in res:
@@ -157,5 +198,48 @@ if __name__ == "__main__":
 
 
 
+"""
+base category:25
+page_ids: 100
+goal_categories: 4
 
+label1: 
+precision: 0.1603125
+recall: 0.184998196899
+
+label2:
+precision: 0.0990625
+recall: 0.180626780627
+
+label3:
+precision: 0.1434375
+recall: 0.158988569449
+
+3, 1000 page_ids, 100 base_categories, 4 goal_categories
+precision: 0.1675
+recall: 0.18565985452
+"""
+
+def individual_test():
+
+    user_query = "microsoft forms"
+    lucene.initVM()
+    analyzer = StandardAnalyzer(Version.LUCENE_4_10_1)
+    reader = IndexReader.open(SimpleFSDirectory(File("./articleTitleIndex_withTitle/")))
+    searcher = IndexSearcher(reader)
+    res =  predict(user_query, analyzer, reader, searcher)
+    print "goal_categories:"
+    print res
+    converted_res = []
+    for label in res:
+        #print label[0]
+        converted_res.append(cvt.WikiToKDD[label[0].replace('_', ' ')])
+    if not res:
+        print "empty goal category set"
+    print "converted goal_categories:"
+    print converted_res
+
+
+if __name__ == "__main__":
+    individual_test()
 

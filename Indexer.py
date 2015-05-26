@@ -15,7 +15,7 @@ from org.apache.lucene.util import Version
 if __name__ == "__main__":
 	
 	lucene.initVM()
-	indexDir = SimpleFSDirectory(File("./articleTitleIndex"))
+	indexDir = SimpleFSDirectory(File("./articleTitleIndex_withTitle"))
 	writerConfig = IndexWriterConfig(Version.LUCENE_4_10_1, StandardAnalyzer())
 	writer = IndexWriter(indexDir, writerConfig)
 
@@ -31,7 +31,7 @@ if __name__ == "__main__":
 			page_title = str(row[1]).replace('_', ' ')
 
 			doc = Document()
-			doc.add(Field("title", page_title, Field.Store.NO, Field.Index.ANALYZED_NO_NORMS))
+			doc.add(Field("title", page_title, Field.Store.YES, Field.Index.ANALYZED_NO_NORMS))
 			doc.add(Field("id", page_id, Field.Store.YES, Field.Index.NO))
 			writer.addDocument(doc)
 		print "total number of tuples", n
